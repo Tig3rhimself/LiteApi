@@ -2,14 +2,12 @@ import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   try {
-    const apiKey = process.env.LITEAPI_KEY; // Your LiteAPI key (set in Vercel env vars)
+    const apiKey = process.env.LITEAPI_KEY; // from Vercel environment variables
     const { countryCode = 'IT', cityName = 'Rome' } = req.query;
 
     const response = await fetch(
       `https://api.liteapi.travel/v3.0/data/hotels?countryCode=${countryCode}&cityName=${cityName}`,
-      {
-        headers: { 'X-API-Key': apiKey },
-      }
+      { headers: { 'X-API-Key': apiKey } }
     );
 
     if (!response.ok) {
