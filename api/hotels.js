@@ -7,37 +7,53 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'LiteAPI key not configured' });
     }
 
-    // Extract query parameters
-    const {
-      countryCode = 'US',
-      cityName = 'New York',
-      checkin = '2025-08-01',
-      checkout = '2025-08-03',
-      adults = 1,
-    } = req.query;
+    const { countryCode, cityName, checkin, checkout, adults } = req.query;
 
-    // Build LiteAPI request URL
-    const apiUrl = `https://api.liteapi.travel/v3.0/data/hotels?countryCode=${countryCode}&cityName=${encodeURIComponent(cityName)}`;
+    // First, get hotels list
+    const hotelsResponse = await fetch(
+      `https://api.liteapi.travel/v3.0/data/hotels?countryCode=${countryCode}&cityName=${encodeURIComponent(cityName)}`,
+      { headers: { 'X-API-Key': apiKey } }
+    );
 
-    // Call LiteAPI
-    const response = await fetch(apiUrl, {
+    if (!hotelsResponse.ok) {
+      const errorText = await hotelsResponse.text();
+      return res.status(hotelsResponse.status).json({ error: `LiteAPI error: ${errorText}` });
+    }
+
+    const hotelsData = await hotelsResponse.json();
+
+    if (!hotelsData.data || hotelsData.data.length === 0) {
+      return res.status(200).json({ data: [] });
+    }
+
+    // Get rates for the first 10 hotels
+    const hotelIds = hotelsData.data.slice(0, 10).map(h => h.id);
+    const ratesResponse = await fetch('https://api.liteapi.travel/v3.0/hotels/rates', {
+      method: 'POST',
       headers: {
         'X-API-Key': apiKey,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        hotelIds: hotelIds,
+        checkin: checkin || '2025-08-01',
+        checkout: checkout || '2025-08-03',
+        occupancies: [{ adults: Number(adults) || 1 }],
+        currency: 'USD',
+        guestNationality: 'US',
+      }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(response.status).json({ error: `LiteAPI error: ${errorText}` });
+    if (!ratesResponse.ok) {
+      const errorText = await ratesResponse.text();
+      return res.status(ratesResponse.status).json({ error: `Rates API error: ${errorText}` });
     }
 
-    const data = await response.json();
-    res.status(200).json(data);
+    const ratesData = await ratesResponse.json();
+
+    res.status(200).json({ hotels: hotelsData.data, rates: ratesData });
   } catch (error) {
     console.error('Server error:', error);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
-}
-
 }
