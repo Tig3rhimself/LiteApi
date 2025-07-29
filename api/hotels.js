@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   try {
-    const apiKey = process.env.LITEAPI_KEY;
+    const apiKey = process.env.LITEAPI_KEY; // Your LiteAPI key (set in Vercel env vars)
     const { countryCode = 'IT', cityName = 'Rome' } = req.query;
 
     const response = await fetch(
@@ -21,6 +21,9 @@ export default async function handler(req, res) {
     const data = await response.json();
     return res.status(200).json(data);
   } catch (error) {
-    return res.status(500).json({ error: 'Server error', details: error.message });
+    return res.status(500).json({
+      error: 'Server error',
+      details: error.message,
+    });
   }
 }
