@@ -1,11 +1,11 @@
 {
-  "name": "liteapi-hotel-backend",
+  "name": "lite-api",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "node-fetch": "^3.3.2"
-  },
-  "scripts": {
-    "start": "vercel dev"
   }
 }
