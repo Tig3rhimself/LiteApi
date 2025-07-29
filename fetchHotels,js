@@ -1,0 +1,52 @@
+// fetchHotels.js
+const BASE_URL = "https://lite-api-six.vercel.app"; // Your Vercel deployment URL
+
+export async function fetchHotels(city, countryCode = "US", checkin = "2025-08-03", checkout = "2025-08-05", adults = 1) {
+  try {
+    // 1. Fetch hotels
+    const hotelsResponse = await fetch(
+      `${BASE_URL}/api/hotels?countryCode=${countryCode}&cityName=${encodeURIComponent(city)}`
+    );
+
+    if (!hotelsResponse.ok) {
+      console.error("Hotels API error:", await hotelsResponse.text());
+      return [];
+    }
+
+    const hotelsData = await hotelsResponse.json();
+    const hotelList = hotelsData.data || hotelsData.hotels || [];
+
+    if (hotelList.length === 0) {
+      console.warn("No hotels found.");
+      return [];
+    }
+
+    // 2. Fetch prices for each hotel (concurrently)
+    const hotelsWithPrices = await Promise.all(
+      hotelList.map(async (hotel) => {
+        try {
+          const ratesResponse = await fetch(
+            `${BASE_URL}/api/hotelRates?hotelId=${hotel.id}&checkin=${checkin}&checkout=${checkout}&adults=${adults}`
+          );
+
+          if (!ratesResponse.ok) {
+            console.error(`Rates API error for hotel ${hotel.id}:`, await ratesResponse.text());
+            return { ...hotel, price: "N/A" };
+          }
+
+          const ratesData = await ratesResponse.json();
+          const price = ratesData?.rates?.[0]?.price || "N/A";
+          return { ...hotel, price };
+        } catch (rateErr) {
+          console.error(`Failed to fetch rates for hotel ${hotel.id}:`, rateErr);
+          return { ...hotel, price: "N/A" };
+        }
+      })
+    );
+
+    return hotelsWithPrices;
+  } catch (err) {
+    console.error("Error fetching hotels:", err);
+    return [];
+  }
+}
